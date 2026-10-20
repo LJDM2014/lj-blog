@@ -1,0 +1,32 @@
+diff --git a/node_modules/@opennextjs/cloudflare/dist/cli/build/patches/plugins/wrangler-external.js b/node_modules/@opennextjs/cloudflare/dist/cli/build/patches/plugins/wrangler-external.js
+index 6d6bb99..09633b4 100644
+--- a/node_modules/@opennextjs/cloudflare/dist/cli/build/patches/plugins/wrangler-external.js
++++ b/node_modules/@opennextjs/cloudflare/dist/cli/build/patches/plugins/wrangler-external.js
+@@ -20,14 +20,25 @@ export function setWranglerExternal() {
+         name: "wrangler-externals",
+         setup: async (build) => {
+             const namespace = "wrangler-externals-plugin";
+-            //TODO: Ideally in the future we would like to analyze the files in case they are using wasm in a Node way (i.e. WebAssembly.instantiate)
++            const ogStubNamespace = "og-wasm-stub";
++            // Stub the @vercel/og wasm binaries (ImageResponse): this app never uses
++            // OG image generation, and they add ~550KB gzipped to the deployed worker.
+             build.onResolve({ filter: /(\.bin|\.wasm(\?module)?)$/ }, ({ path, importer }) => {
++                const resolved = resolve(dirname(importer), path);
++                if (/[\\/]@vercel[\\/]og[\\/](yoga|resvg)\.wasm/.test(resolved)) {
++                    return { path: resolved.replace(/[\\/:*?"<>|]/g, "_"), namespace: ogStubNamespace };
++                }
+                 return {
+-                    path: normalizePath(resolve(dirname(importer), path)),
++                    path: normalizePath(resolved),
+                     namespace,
+                     external: true,
+                 };
+             });
++            build.onLoad({ filter: /.*/, namespace: ogStubNamespace }, ({ path }) => {
++                return {
++                    contents: `// stubbed: ${path} (unused @vercel/og wasm)\nexport default null;`,
++                };
++            });
+             build.onLoad({ filter: /.*/, namespace }, async ({ path }) => {
+                 return {
+                     contents: `export * from '${path}';`,

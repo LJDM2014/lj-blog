@@ -1,0 +1,18 @@
+// Cloudflare Workers 配置（配合 @opennextjs/cloudflare 使用）
+// 部署：npm run deploy:cf   本地预览：npm run preview:cf
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lj-blog",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // 说明：NEXT_PUBLIC_* 环境变量在构建时内联进产物（本机构建自动读取 .env.local），
+  // 无需在此配置 vars。Supabase 变量缺失时构建产物将不可用，请确保构建环境已配置。
+}
