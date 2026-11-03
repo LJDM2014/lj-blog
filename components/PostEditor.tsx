@@ -15,6 +15,7 @@ export interface PostEditorData {
   tags: string
   status: 'draft' | 'published'
   published_at?: string | null
+  project_id?: string | null
 }
 
 /** 本地自动保存的草稿结构 */
@@ -53,13 +54,20 @@ const TOOLBAR: { label: string; title: string; action: 'wrap' | 'block' | 'link'
   { label: '图片', title: '上传图片/音视频并插入', action: 'image' },
 ]
 
-export default function PostEditor({ initial }: { initial?: PostEditorData }) {
+export default function PostEditor({
+  initial,
+  projects = [],
+}: {
+  initial?: PostEditorData
+  projects?: { id: string; name: string }[]
+}) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [slug, setSlug] = useState(initial?.slug ?? '')
   const [excerpt, setExcerpt] = useState(initial?.excerpt ?? '')
   const [coverImage, setCoverImage] = useState(initial?.cover_image ?? '')
   const [tags, setTags] = useState(initial?.tags ?? '')
   const [content, setContent] = useState(initial?.content ?? '')
+  const [projectId, setProjectId] = useState(initial?.project_id ?? '')
   const [schedule, setSchedule] = useState(
     initial?.published_at && initial.status !== 'published' ? toLocalInput(initial.published_at) : ''
   )
@@ -341,6 +349,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
         status,
         // 草稿携带定时发布时间；正式发布由服务端决定发布时间
         scheduled_at: status === 'draft' && !isPublishedPost ? (schedule || null) : undefined,
+        project_id: projectId || null,
       })
       if (result.ok === false) {
         setError(result.error)
@@ -392,14 +401,15 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
           />
           <button
             onClick={() => importInputRef.current?.click()}
-            disabled={busy !== null}
+            disabled={busy !== null || pending}
             className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-muted disabled:opacity-50"
           >
             {busy === 'import' ? '导入中...' : '导入 .md'}
           </button>
           <button
             onClick={() => setPreview((v) => !v)}
-            className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-muted"
+            disabled={pending}
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-muted disabled:opacity-50"
           >
             {preview ? '编辑' : '预览'}
           </button>
@@ -422,13 +432,15 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
           <div className="flex gap-2">
             <button
               onClick={restoreDraft}
-              className="rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+              disabled={pending}
+              className="rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               恢复
             </button>
             <button
               onClick={discardDraft}
-              className="rounded-md border border-amber-300 px-3 py-1 text-xs hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40"
+              disabled={pending}
+              className="rounded-md border border-amber-300 px-3 py-1 text-xs hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:hover:bg-amber-900/40"
             >
               丢弃
             </button>
@@ -448,6 +460,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="输入文章标题"
             className={inputClass}
+            disabled={pending}
             required
           />
         </div>
@@ -461,7 +474,8 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
             <button
               type="button"
               onClick={generateSlug}
-              className="text-xs text-primary hover:underline"
+              disabled={pending}
+              className="text-xs text-primary hover:underline disabled:opacity-50"
             >
               从标题生成
             </button>
@@ -472,6 +486,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
             onChange={(e) => setSlug(e.target.value)}
             placeholder="article-slug"
             className={inputClass}
+            disabled={pending}
             required
           />
           <p className="mt-1 text-xs text-muted-foreground">
@@ -490,6 +505,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
             rows={2}
             placeholder="输入文章摘要"
             className={`${inputClass} resize-none`}
+            disabled={pending}
             required
           />
         </div>
@@ -505,7 +521,33 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
             onChange={(e) => setTags(e.target.value)}
             placeholder="技术, 生活, 随笔"
             className={inputClass}
+            disabled={pending}
           />
+        </div>
+
+        {/* 所属项目 */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+            所属项目 <span className="text-muted-foreground">(可选，项目页将收录本文)</span>
+          </label>
+          <select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            className={inputClass}
+            disabled={pending}
+          >
+            <option value="">不关联项目</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          {projects.length === 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              暂无可选项目（需先执行 011 迁移并在后台创建项目）
+            </p>
+          )}
         </div>
 
         {/* 定时发布 */}
@@ -519,6 +561,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
               value={schedule}
               onChange={(e) => setSchedule(e.target.value)}
               className={inputClass}
+              disabled={pending}
             />
             <p className="mt-1 text-xs text-muted-foreground">
               填写后保存草稿，到达该时间将自动发布（需已配置定时任务）；留空表示不定时
@@ -546,7 +589,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
-              disabled={busy !== null}
+              disabled={busy !== null || pending}
               className="text-xs text-primary hover:underline disabled:opacity-50"
             >
               {busy === 'cover' ? '上传中...' : '上传图片'}
@@ -558,6 +601,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
             onChange={(e) => setCoverImage(e.target.value)}
             placeholder="https://... 或点击右侧上传"
             className={inputClass}
+            disabled={pending}
           />
           {coverImage && (
             <img
@@ -588,7 +632,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
                   type="button"
                   title={item.title}
                   onClick={() => handleToolbar(item)}
-                  disabled={busy !== null}
+                  disabled={busy !== null || pending}
                   className="rounded-md px-2 py-1 text-xs text-foreground transition-colors hover:bg-background disabled:opacity-50"
                 >
                   {item.label}
@@ -628,6 +672,7 @@ export default function PostEditor({ initial }: { initial?: PostEditorData }) {
               rows={16}
               placeholder={'使用 Markdown 编写内容...\n\n支持图片、代码块、表格、音频与视频（插入菜单、粘贴或拖拽文件）'}
               className={`${inputClass} resize-y font-mono text-sm leading-relaxed`}
+              disabled={pending}
               required
             />
           )}

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import GithubLoginButton from '@/components/GithubLoginButton'
 import Turnstile, { turnstileEnabled } from '@/components/Turnstile'
 
@@ -16,7 +15,6 @@ export default function RegisterPage() {
   // Turnstile token（一次性：每次提交后重置组件重新获取）
   const [tsToken, setTsToken] = useState<string | null>(null)
   const [tsKey, setTsKey] = useState(0)
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,9 +39,8 @@ export default function RegisterPage() {
     }
 
     if (json.hasSession) {
-      // 未开启邮箱确认：注册即登录
-      router.push('/')
-      router.refresh()
+      // 未开启邮箱确认：注册即登录（会话 cookie 由服务端写入，需整页跳转）
+      window.location.replace('/')
     } else {
       // 开启了邮箱确认：提示查收邮件
       setLoading(false)

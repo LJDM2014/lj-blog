@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import GithubLoginButton from '@/components/GithubLoginButton'
 
@@ -11,7 +10,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   // OAuth 回调失败时带回 ?error=oauth
   useEffect(() => {
@@ -39,8 +37,9 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/')
-    router.refresh()
+    // 会话 cookie 由服务端接口写入，浏览器端 supabase-js 不会触发
+    // onAuthStateChange，需整页跳转让 Navbar 重新读取会话
+    window.location.replace('/')
   }
 
   return (

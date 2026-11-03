@@ -1,6 +1,6 @@
 # lj-blog
 
-A full-stack personal blog built with **Next.js 16 + Supabase + Cloudflare Workers**, featuring Markdown writing, full-text search, user interactions (comments/likes/favorites), in-app notifications, an admin dashboard, and scheduled publishing.
+A full-stack personal blog built with **Next.js 16 + Supabase + Cloudflare Workers**, featuring Markdown writing, full-text search, user interactions (comments/likes/favorites), project showcase, in-app notifications, an admin dashboard, and scheduled publishing.
 
 ## Features
 
@@ -8,6 +8,7 @@ A full-stack personal blog built with **Next.js 16 + Supabase + Cloudflare Worke
 - **Posts**: paginated home list; detail pages with sticky TOC (with scroll-spy highlight), reading time estimate, prev/next navigation, related posts, one-click code copy, mobile TOC drawer, and back-to-top
 - **Search**: PostgreSQL full-text search (CJK-aware tokenizer + weighted ranking) with `<mark>` keyword highlighting; automatic ILIKE fallback when the RPC is unavailable
 - **Tags / Archives**: tag cloud, per-tag listing, archives grouped by year/month
+- **Projects**: project list & detail pages (screenshot gallery, language / tech-stack tags, repo & live demo links, related posts)
 - **SEO**: dynamic OG image generation (`/og/[slug]`), RSS (`/feed.xml`), sitemap, robots, JSON-LD (BlogPosting)
 - **Pages**: About, Links (config-driven), custom 404 / error pages
 
@@ -22,7 +23,8 @@ A full-stack personal blog built with **Next.js 16 + Supabase + Cloudflare Worke
 
 ### Admin Dashboard (`/admin`)
 - **Dashboard**: PV/UV trend charts (pure SVG), overview stats, top 10 posts
-- **Post management**: enhanced Markdown editor — quick toolbar, paste/drag image upload, localStorage autosave & restore, word count, scheduled publishing
+- **Post management**: enhanced Markdown editor — quick toolbar, paste/drag image upload, localStorage autosave & restore, word count, scheduled publishing, .md import/export, project association; the form is locked during save/publish (inputs and buttons disabled) and returns to the management page after publishing
+- **Project management**: create/edit projects — Markdown description, screenshot upload & reordering, language / tech-stack tags, sort order; the form is locked during save/publish and automatically returns to the project management page after publishing
 - **Comment management**: paginated listing and deletion
 - **Media library**: image upload, copy URL, delete (path-traversal protected)
 - **Interactions**: see who liked/favorited your posts
@@ -73,7 +75,7 @@ TURNSTILE_SECRET_KEY=
 
 ### 3. Initialize the database
 
-Run the migration files in `supabase/migrations/` in order (001 ~ 010) via Supabase Dashboard → SQL Editor.
+Run the migration files in `supabase/migrations/` in order (001 ~ 011) via Supabase Dashboard → SQL Editor.
 
 > For scheduled publishing, enable the `pg_cron` extension first: `create extension pg_cron;`
 
@@ -102,16 +104,17 @@ Deploys to Cloudflare Workers via OpenNext. Notes:
 ```
 app/
   blog/[slug]/        # Post detail
+  projects/           # Project list / project detail
   search/ tags/ archives/ about/ links/   # Frontend pages
   login/ register/ profile/ notifications/ # User pages
-  admin/              # Admin dashboard (dashboard/posts/comments/media/interactions)
+  admin/              # Admin dashboard (dashboard/posts/projects/comments/interactions/media)
   actions/            # Server Actions (comments/likes/favorites)
   api/                # auth proxy, cron publish
   og/[slug]/          # Dynamic OG image generation
   feed.xml/ sitemap.ts robots.ts
 components/           # UI components (incl. admin/)
-lib/                  # Data layer (posts/moderation/ratelimit/turnstile, etc.)
-supabase/migrations/  # Database migrations (001 ~ 010)
+lib/                  # Data layer (posts/projects/moderation/ratelimit/turnstile, etc.)
+supabase/migrations/  # Database migrations (001 ~ 011)
 ```
 
 ## Contributing

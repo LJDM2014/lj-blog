@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getPostBySlug, getAdjacentPosts, getRelatedPosts, incrementViews } from '@/lib/posts'
+import { getPostProject } from '@/lib/projects'
 import { renderMarkdown } from '@/lib/markdown'
 import { SITE_URL } from '@/lib/site'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -50,7 +51,8 @@ export default async function BlogPostPage({ params }: Props) {
   }
 
   incrementViews(slug)
-  const [{ html, toc }, { prev, next }, related] = await Promise.all([
+  const [project, { html, toc }, { prev, next }, related] = await Promise.all([
+    getPostProject(post.id),
     renderMarkdown(post.content ?? ''),
     getAdjacentPosts(post.id, post.published_at),
     getRelatedPosts(post.id, post.tags),
@@ -93,6 +95,15 @@ export default async function BlogPostPage({ params }: Props) {
               {post.title}
             </h1>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              {project && (
+                <Link
+                  href={`/projects/${project.slug}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs text-primary transition-opacity hover:opacity-80"
+                  title="查看项目介绍"
+                >
+                  📦 项目：{project.name}
+                </Link>
+              )}
               <time>{dateText}</time>
               <span>{post.views ?? 0} 次阅读</span>
               <span>约 {readingMinutes(post.content ?? '')} 分钟</span>

@@ -45,6 +45,8 @@ export interface SavePostInput {
   status: 'draft' | 'published'
   /** 定时发布时间（仅草稿生效）；null 表示清除定时，undefined 表示不改动 */
   scheduled_at?: string | null
+  /** 所属项目 id；null 表示清除关联，undefined 表示不改动 */
+  project_id?: string | null
 }
 
 /** 新建或更新文章（admin 专用） */
@@ -70,6 +72,11 @@ export async function savePost(input: SavePostInput): Promise<ActionResult> {
       updated_at: now,
     }
 
+    // 所属项目（仅传入时改动；空串视为清除）
+    if (input.project_id !== undefined) {
+      payload.project_id = input.project_id || null
+    }
+
     if (input.id) {
       const { data: existing } = await supabase
         .from('posts')
@@ -91,6 +98,7 @@ export async function savePost(input: SavePostInput): Promise<ActionResult> {
       if (error) return { ok: false, error: `保存失败：${error.message}` }
       revalidatePath('/')
       revalidatePath('/admin')
+      revalidatePath('/projects')
       revalidatePath(`/blog/${slug}`)
       return { ok: true, id: input.id }
     }
@@ -117,9 +125,10 @@ export async function savePost(input: SavePostInput): Promise<ActionResult> {
     }
     revalidatePath('/')
     revalidatePath('/admin')
+    revalidatePath('/projects')
     return { ok: true, id: data.id }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : '操作失败' }
+    return { ok: false, error: e instanceof Error ? e.message : '保存失败' }
   }
 }
 
@@ -278,5 +287,101 @@ export async function importMarkdown(file: File): Promise<ActionResult> {
     return { ok: true, id: data.id }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : '导入失败' }
+  }
+}
+
+/** 规范化逗号/数组输入为去重后的字符串数组 */
+function normalizeList(raw: unknown): string[] {
+  const list = normalizeTags(raw)
+  return [...new Set(list)]
+}
+
+/** 清理 URL 字段：空串视为 null */
+function cleanUrl(raw: unknown): string | null {
+  const url = String(raw ?? '').trim()
+  return url || null
+}
+
+export interface SaveProjectInput {
+  id?: string
+  name: string
+  slug: string
+  tagline?: string
+  description?: string
+  repo_url?: string
+  demo_url?: string
+  languages: string[]
+  tech_stack: string[]
+  screenshots: string[]
+  status: 'draft' | 'published'
+  sort_order?: number
+}
+
+/** 新建或更新项目（admin 专用） */
+export async function saveProject(input: SaveProjectInput): Promise<ActionResult> {
+  try {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    const name = input.name.trim()
+    const slug = slugify(input.slug || input.name)
+    if (!name || !slug) {
+      return { ok: false, error: '项目名称与 Slug 均为必填' }
+    }
+
+    const payload: Record<string, unknown> = {
+      name,
+      slug,
+      tagline: input.tagline?.trim() || null,
+      description: input.description?.trim() || null,
+      repo_url: cleanUrl(input.repo_url),
+      demo_url: cleanUrl(input.demo_url),
+      languages: normalizeList(input.languages),
+      tech_stack: normalizeList(input.tech_stack),
+      screenshots: (input.screenshots ?? []).map((s) => s.trim()).filter(Boolean),
+      status: input.status,
+      sort_order: Number.isFinite(input.sort_order) ? Number(input.sort_order) : 0,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (input.id) {
+      const { error } = await supabase.from('projects').update(payload).eq('id', input.id)
+      if (error) return { ok: false, error: `保存失败：${error.message}` }
+    } else {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert(payload)
+        .select('id')
+        .single()
+      if (error) {
+        if (error.code === '23505') {
+          return { ok: false, error: `Slug「${slug}」已存在，请更换一个` }
+        }
+        return { ok: false, error: `保存失败：${error.message}` }
+      }
+      revalidatePath('/admin/projects')
+      return { ok: true, id: data.id }
+    }
+
+    revalidatePath('/admin/projects')
+    revalidatePath('/projects')
+    return { ok: true, id: input.id }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '操作失败' }
+  }
+}
+
+/** 删除项目（admin 专用；关联文章的 project_id 由外键 on delete set null 自动置空） */
+export async function deleteProject(id: string): Promise<ActionResult> {
+  try {
+    await requireAdmin()
+    const supabase = await createClient()
+    const { error } = await supabase.from('projects').delete().eq('id', id)
+    if (error) return { ok: false, error: `删除失败：${error.message}` }
+    revalidatePath('/admin/projects')
+    revalidatePath('/projects')
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '操作失败' }
   }
 }

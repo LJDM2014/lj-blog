@@ -82,6 +82,12 @@ export default function Navbar() {
               首页
             </Link>
             <Link
+              href="/projects"
+              className="text-sm text-muted-foreground transition-colors hover:text-primary"
+            >
+              项目
+            </Link>
+            <Link
               href="/archives"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >

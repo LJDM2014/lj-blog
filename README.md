@@ -1,6 +1,6 @@
 # lj-blog
 
-基于 **Next.js 16 + Supabase + Cloudflare Workers** 的全栈个人博客系统，支持 Markdown 写作、全文搜索、用户互动（评论/点赞/收藏）、站内通知、管理后台与定时发布。
+基于 **Next.js 16 + Supabase + Cloudflare Workers** 的全栈个人博客系统，支持 Markdown 写作、全文搜索、用户互动（评论/点赞/收藏）、项目展示、站内通知、管理后台与定时发布。
 
 ## 功能特性
 
@@ -8,6 +8,7 @@
 - **文章**：首页分页列表、详情页（目录 TOC 高亮、阅读时长估算、上下篇导航、相关文章推荐、代码块一键复制、移动端目录抽屉、返回顶部）
 - **搜索**：PostgreSQL 全文检索（支持中日韩分词优化 + 权重排序），关键词 `<mark>` 高亮，RPC 不可用时自动回退 ILIKE
 - **标签 / 归档**：标签云与标签筛选页、按年月归档
+- **项目**：项目列表页与详情页（截图墙、编程语言 / 技术栈标签、仓库与在线演示链接、关联文章展示）
 - **SEO**：动态 OG 分享图生成（`/og/[slug]`）、RSS（`/feed.xml`）、sitemap、robots、JSON-LD（BlogPosting）
 - **页面**：关于页、友链页（配置驱动）、自定义 404 / error 页
 
@@ -22,7 +23,8 @@
 
 ### 管理后台（`/admin`）
 - **仪表盘**：PV / UV 趋势图（纯 SVG）、总览统计、热门文章 TOP10
-- **文章管理**：Markdown 编辑器增强版 —— 快捷工具栏、粘贴 / 拖拽上传图片、localStorage 自动保存与恢复、字数统计、定时发布
+- **文章管理**：Markdown 编辑器增强版 —— 快捷工具栏、粘贴 / 拖拽上传图片、localStorage 自动保存与恢复、字数统计、定时发布、导入 / 导出 .md、关联项目；保存 / 发布过程中表单锁定（输入框与按钮禁用），发布成功后返回管理页
+- **项目管理**：新建 / 编辑项目 —— Markdown 介绍、截图上传与排序、语言 / 技术栈标签、排序值；保存 / 发布过程中表单锁定，发布成功后自动返回项目管理页
 - **评论管理**：分页查看与删除
 - **媒体库**：图片上传、复制链接、删除（防目录穿越）
 - **互动明细**：查看文章被谁点赞 / 收藏
@@ -73,7 +75,7 @@ TURNSTILE_SECRET_KEY=
 
 ### 3. 初始化数据库
 
-在 Supabase Dashboard → SQL Editor 中按编号顺序执行 `supabase/migrations/` 下的迁移文件（001 ~ 010）。
+在 Supabase Dashboard → SQL Editor 中按编号顺序执行 `supabase/migrations/` 下的迁移文件（001 ~ 011）。
 
 > 如需定时发布，先启用 `pg_cron` 扩展：`create extension pg_cron;`
 
@@ -102,16 +104,17 @@ npm run deploy:cf
 ```
 app/
   blog/[slug]/        # 文章详情
+  projects/           # 项目列表 / 项目详情
   search/ tags/ archives/ about/ links/   # 前台页面
   login/ register/ profile/ notifications/ # 用户相关
-  admin/              # 管理后台（dashboard/posts/comments/media/interactions）
+  admin/              # 管理后台（dashboard/posts/projects/comments/interactions/media）
   actions/            # Server Actions（评论/点赞/收藏）
   api/                # auth 代理、cron 定时发布
   og/[slug]/          # OG 图动态生成
   feed.xml/ sitemap.ts robots.ts
 components/           # UI 组件（含 admin/ 子目录）
-lib/                  # 数据层（posts/moderation/ratelimit/turnstile 等）
-supabase/migrations/  # 数据库迁移（001 ~ 010）
+lib/                  # 数据层（posts/projects/moderation/ratelimit/turnstile 等）
+supabase/migrations/  # 数据库迁移（001 ~ 011）
 ```
 
 ## 参与贡献

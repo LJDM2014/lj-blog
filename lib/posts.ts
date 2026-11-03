@@ -10,6 +10,8 @@ export interface Post {
   content?: string
   status: 'draft' | 'published'
   tags?: string[] | null
+  /** 所属项目（011 迁移后可用） */
+  project_id?: string | null
   published_at: string | null
   created_at: string
   updated_at?: string
@@ -269,12 +271,24 @@ export async function getAdminPosts(): Promise<Post[]> {
   return data ?? []
 }
 
-/** 按 id 获取文章（管理后台编辑用，含草稿） */
+/** 按 id 获取文章（管理后台编辑用，含草稿；project_id 依赖 011 迁移，未执行时自动回退） */
 export async function getPostById(id: string): Promise<Post | null> {
   const supabase = await createClient()
+  const fields = 'id, slug, title, excerpt, cover_image, content, status, tags, published_at, created_at, updated_at'
+
+  // 优先带 project_id 查询（011 迁移后可用）
+  const withProject = await supabase
+    .from('posts')
+    .select(`${fields}, project_id`)
+    .eq('id', id)
+    .single()
+
+  if (!withProject.error) return withProject.data
+
+  // 回退：不带 project_id（011 未执行时列不存在）
   const { data, error } = await supabase
     .from('posts')
-    .select('id, slug, title, excerpt, cover_image, content, status, tags, published_at, created_at, updated_at')
+    .select(fields)
     .eq('id', id)
     .single()
 

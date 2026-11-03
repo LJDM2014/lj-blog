@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import PostEditor from '@/components/PostEditor'
 import { getPostById } from '@/lib/posts'
+import { getAdminProjects } from '@/lib/projects'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,7 @@ export default async function EditPostPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const post = await getPostById(id)
+  const [post, projects] = await Promise.all([getPostById(id), getAdminProjects()])
 
   if (!post) {
     notFound()
@@ -28,7 +29,9 @@ export default async function EditPostPage({
         tags: (post.tags ?? []).join(', '),
         status: post.status,
         published_at: post.published_at,
+        project_id: post.project_id ?? null,
       }}
+      projects={projects.map((p) => ({ id: p.id, name: p.name }))}
     />
   )
 }
